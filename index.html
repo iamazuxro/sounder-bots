@@ -771,6 +771,26 @@
     }
 
     // ═══════════════════════════════════════════════════
+    // REFRESH UI — call after every write
+    // ═══════════════════════════════════════════════════
+    async function refreshAll() {
+      const [t, u, s] = await Promise.all([
+        db.from('tasks').select('*').order('created_at', { ascending: true }),
+        db.from('updates').select('*').order('created_at', { ascending: false }),
+        db.from('students').select('*').order('name', { ascending: true })
+      ]);
+      if (!t.error) tasks    = t.data.map(r => ({ id:r.id, title:r.title, team:r.team, due:r.due, priority:r.priority, status:r.status }));
+      if (!u.error) updates  = u.data.map(r => ({ id:r.id, studentId:r.student_id, name:r.name, note:r.note, task:r.task, time:r.time }));
+      if (!s.error) students = s.data.map(r => ({ id:r.id, name:r.name, pin:r.pin }));
+      refreshCoachList();
+      refreshStudentList();
+      updateProgress();
+      renderStudentRoster();
+      renderStudentLoginList();
+      if (document.getElementById('summaryPage').classList.contains('active')) renderSummary();
+    }
+
+    // ═══════════════════════════════════════════════════
     // NAV / PAGE HELPERS
     // ═══════════════════════════════════════════════════
     function setTab(id) {
@@ -915,6 +935,7 @@
       document.getElementById('newStudentName').value = '';
       document.getElementById('newStudentPin').value  = '';
       showToast(`"${name}" added!`, 'success');
+      await refreshAll();
     }
 
     async function deleteStudent(id) {
@@ -926,6 +947,7 @@
       if (error) { showToast('Error: ' + error.message, 'error'); return; }
       if (currentStudent && currentStudent.id === id) { currentStudent = null; localStorage.removeItem('currentStudent'); }
       showToast(`"${s.name}" removed`, 'warning');
+      await refreshAll();
     }
 
     function renderStudentRoster() {
@@ -1003,6 +1025,7 @@
         showToast('Task saved!', 'success');
       }
       clearForm();
+      await refreshAll();
     }
 
     async function deleteSelected() {
@@ -1013,6 +1036,7 @@
       hideLoading();
       if (error) { showToast('Error: ' + error.message, 'error'); return; }
       clearForm(); showToast('Task deleted', 'warning');
+      await refreshAll();
     }
 
     function flash(id) {
@@ -1192,6 +1216,7 @@
       if (sr.error || ur.error) { showToast('Error submitting update', 'error'); return; }
       document.getElementById('studentUpdate').value = '';
       showToast('Update submitted!', 'success');
+      await refreshAll();
     }
 
     // -------------------------
